@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#111">
 <link rel="manifest" href="manifest.json">
-<link rel="apple-touch-icon" href="icon.svg">
+<link rel="apple-touch-icon" href="icon.png">
 <title>車高変化計算</title>
 <style>
 *{box-sizing:border-box}body{margin:0;background:#f4f4f5;color:#111;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans JP",sans-serif}
@@ -74,7 +74,11 @@ button{width:100%;border:0;border-radius:12px;padding:14px;font-size:17px;font-w
 基準1Gホイール沈み込み = 輪荷重×9.80665 ÷ 基準ホイールレート<br>
 各仕様1Gホイール沈み込み = 輪荷重×9.80665 ÷ 各仕様ホイールレート<br>
 ホイール移動量 = 基準1G沈み込み − 各仕様1G沈み込み ＋ 各仕様プリロード<br>
-ダンパー移動量 = ホイール移動量 × MR<br>
+プリロード荷重 = スプリングレート × プリロード量<br>
+プリロード実効荷重 = プリロード荷重 × MR<br>
+プリロード実効沈み込み = プリロード実効荷重 ÷ ホイールレート<br>
+1Gダンパー変位 = (各仕様1G沈み込み − プリロード実効沈み込み) × MR<br>
+ダンパー変化量 = 変更後1Gダンパー変位 − 現在1Gダンパー変位<br>
 車高変化 = 変更後ホイール移動量 − 変更前ホイール移動量
 </div></div>
 </div>
@@ -100,9 +104,7 @@ function fill(id,arr,formatter=x=>x){
   const s=q(id);
   s.innerHTML='<option value="">選択</option>'+arr.map(v=>`<option value="${v}">${formatter(v)}</option>`).join('');
 }
-function setFromPreset(target,sel){
-  if(sel.value!=="") q(target).value=sel.value;
-}
+function setFromPreset(target,sel){ if(sel.value!=="") q(target).value=sel.value; }
 function syncRateUnits(){
   const u=q("unit").value;
   const a=u==="lb"?presetsLb:presetsKg;
@@ -115,9 +117,7 @@ function togglePre(side){
   fill(side+"PrePreset",turn?presetsTurn:presetsMm,turn?fmtTurn:x=>x);
   q(side+"Pre").step=turn?"0.1666667":"0.1";
 }
-function rateNmm(v,u){
-  return u==="lb"?v*0.1751268:v*9.80665;
-}
+function rateNmm(v,u){ return u==="lb"?v*0.1751268:v*9.80665; }
 function preloadMm(side){
   const mode=q(side+"PreMode").value;
   const v=+q(side+"Pre").value;
@@ -125,16 +125,6 @@ function preloadMm(side){
   return mode==="turn"?v*pitch:v;
 }
 
-/*
-  各仕様を独立して計算:
-  1Gホイール沈み込み = 荷重 / ホイールレート
-  現在/変更後1Gダンパー変位 = (1Gホイール沈み込み + プリロード) × MR
-
-  車高変化・移動量:
-  基準状態に対するホイール移動量を、
-  「現在/変更後の1G沈み込み」と「プリロード」を使って比較。
-  変更後 - 現在で変化量を出す。
-*/
 function calc(){
   const load=+q("load").value;
   const mr=+q("mr").value;
@@ -143,43 +133,69 @@ function calc(){
   const oldRate=+q("oldRate").value;
   const newRate=+q("newRate").value;
 
-  if(!(load>0&&mr>0&&oldRate>0&&newRate>0)) return;
+  if(!(load>0&&mr>0&&refRate>0&&oldRate>0&&newRate>0)) return;
 
   const oldPre=preloadMm("old");
   const newPre=preloadMm("new");
 
-  function values(rate,pre){
+  /*
+   * -----------------------------
+   * ホイール／車高側
+   * -----------------------------
+   * 基準状態（基準レート・0T）からの移動量を計算。
+   * ＋ = 車高アップ方向
+   * − = 車高ダウン方向
+   */
+  function wheelSag(rate){
+    const spring=rateNmm(rate,u);
+    const wheelRate=spring*mr*mr;
+    return (load*9.80665)/wheelRate;
+  }
+
+  const refSag=wheelSag(refRate);
+  const oldSag=wheelSag(oldRate);
+  const newSag=wheelSag(newRate);
+
+  const oldWheelMove=refSag-oldSag+oldPre;
+  const newWheelMove=refSag-newSag+newPre;
+
+  // 変更後 − 変更前。符号は車高変化と同じ。
+  const wheelDelta=newWheelMove-oldWheelMove;
+  const rideDelta=wheelDelta;
+
+  /*
+   * -----------------------------
+   * ダンパー側
+   * -----------------------------
+   * 各仕様を独立計算。
+   * 1) 1G沈み込みからプリロード荷重を考慮した実効沈み込みを求める
+   * 2) MRでダンパー側へ変換
+   *
+   * プリロード荷重 = スプリングレート × プリロード
+   * MR考慮後の実効プリロード荷重 = プリロード荷重 × MR
+   * それをホイールレートに換算して1G沈み込みから減算。
+   */
+  function damperOneG(rate,pre){
     const spring=rateNmm(rate,u);
     const wheelRate=spring*mr*mr;
     const sag=(load*9.80665)/wheelRate;
 
-    // 「現在のダンパー変位」はこの仕様単独で計算
-    const damper=(sag+pre)*mr;
+    const preloadSpringForce=spring*pre; // N
+    const preloadWheelForce=preloadSpringForce*mr;
+    const preloadEffectiveSag=preloadWheelForce/wheelRate;
 
-    // 基準状態（基準レート・0T）からのホイール移動量
-    // レート変更で沈み込みが増えるほどマイナス、
-    // プリロードが増えるほどプラス。
-    const refSpring=rateNmm(refRate,u);
-    const refWheelRate=refSpring*mr*mr;
-    const refSag=(load*9.80665)/refWheelRate;
-    const wheelMove=refSag-sag+pre;
-
-    return {sag,damper,wheelMove};
+    const effectiveWheelSag=sag-preloadEffectiveSag;
+    return effectiveWheelSag*mr;
   }
 
-  const oldV=values(oldRate,oldPre);
-  const newV=values(newRate,newPre);
-
-  const damperDelta=newV.damper-oldV.damper;
-  const wheelDelta=newV.wheelMove-oldV.wheelMove;
-
-  // ホイール側の変化と車高変化は逆符号
-  const rideDelta=-wheelDelta;
+  const oldDamper=damperOneG(oldRate,oldPre);
+  const newDamper=damperOneG(newRate,newPre);
+  const damperDelta=newDamper-oldDamper;
 
   const ride=q("ride").value===""?null:+q("ride").value;
 
-  q("oldD").textContent=oldV.damper.toFixed(2)+" mm";
-  q("newD").textContent=newV.damper.toFixed(2)+" mm";
+  q("oldD").textContent=oldDamper.toFixed(2)+" mm";
+  q("newD").textContent=newDamper.toFixed(2)+" mm";
   q("dDelta").textContent=(damperDelta>=0?"+":"")+damperDelta.toFixed(2)+" mm";
   q("sagDelta").textContent=(wheelDelta>=0?"+":"")+wheelDelta.toFixed(2)+" mm";
   q("rideDelta").textContent=(rideDelta>=0?"+":"")+rideDelta.toFixed(2)+" mm";
