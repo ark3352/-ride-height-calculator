@@ -73,7 +73,7 @@ button{width:100%;border:0;border-radius:12px;padding:14px;font-size:17px;font-w
 <div class="card"><h2>計算式</h2><div class="formula">
 基準1Gホイール沈み込み = 輪荷重×9.80665 ÷ 基準ホイールレート<br>
 各仕様1Gホイール沈み込み = 輪荷重×9.80665 ÷ 各仕様ホイールレート<br>
-ホイール移動量 = 基準1G沈み込み − 各仕様1G沈み込み ＋ プリロード<br>
+ホイール移動量 = 基準1G沈み込み − 各仕様1G沈み込み ＋ 各仕様プリロード<br>
 ダンパー移動量 = ホイール移動量 × MR<br>
 車高変化 = 変更後ホイール移動量 − 変更前ホイール移動量
 </div></div>
@@ -90,8 +90,11 @@ const presetsTurn=[0,1/6,2/6,3/6,4/6,5/6,1,7/6,8/6,9/6,10/6,11/6,12/6,13/6,14/6,
 function fmtTurn(v){
   const sixth=Math.round(v*6);
   if(sixth===0)return "0ターン";
-  if(sixth%6===0)return (sixth/6)+"ターン";
-  return sixth+"/6ターン";
+  const whole=Math.floor(sixth/6);
+  const rem=sixth%6;
+  if(rem===0)return whole+"ターン";
+  if(whole===0)return rem+"/6ターン";
+  return whole+" "+rem+"/6ターン";
 }
 function fill(id,arr,formatter=x=>x){
   const s=q(id);
@@ -136,6 +139,7 @@ function calc(){
   const load=+q("load").value;
   const mr=+q("mr").value;
   const u=q("unit").value;
+  const refRate=+q("refRate").value;
   const oldRate=+q("oldRate").value;
   const newRate=+q("newRate").value;
 
@@ -152,8 +156,13 @@ function calc(){
     // 「現在のダンパー変位」はこの仕様単独で計算
     const damper=(sag+pre)*mr;
 
-    // 基準から見たホイール側の移動量
-    const wheelMove=sag+pre;
+    // 基準状態（基準レート・0T）からのホイール移動量
+    // レート変更で沈み込みが増えるほどマイナス、
+    // プリロードが増えるほどプラス。
+    const refSpring=rateNmm(refRate,u);
+    const refWheelRate=refSpring*mr*mr;
+    const refSag=(load*9.80665)/refWheelRate;
+    const wheelMove=refSag-sag+pre;
 
     return {sag,damper,wheelMove};
   }
