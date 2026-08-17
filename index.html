@@ -25,6 +25,12 @@ button{width:100%;border:0;border-radius:12px;padding:14px;font-size:17px;font-w
 <h1>車高変化計算</h1>
 <div class="sub">レート・プリロード変更による1Gダンパー変位と車高変化</div>
 
+<div class="card"><h2>基準条件</h2><div class="grid">
+<div><label>基準スプリングレート</label><input id="refRate" type="number" step="0.1" value="1300"></div>
+<div><label>基準プリロード</label><input value="0ターン" disabled></div>
+<div class="full"><div class="note">早見表と同じく「基準レート・プリロード0」を0mmとして、各仕様のホイール移動量を算出します。初期基準は1300 lb/inです。</div></div>
+</div></div>
+
 <div class="card"><h2>車両条件</h2><div class="grid">
 <div><label>輪荷重 [kg]</label><input id="load" type="number" step="0.1" value="375"></div>
 <div><label>モーションレシオ（ダンパー/ホイール）</label><input id="mr" type="number" step="0.001" value="0.785"></div>
@@ -54,22 +60,22 @@ button{width:100%;border:0;border-radius:12px;padding:14px;font-size:17px;font-w
 <div class="card"><button onclick="calc()">計算する</button></div>
 
 <div class="card"><h2>計算結果</h2><div class="result">
-<div class="box"><div class="k">現在 1G ダンパー変位</div><div class="v" id="oldD">—</div></div>
-<div class="box"><div class="k">変更後 1G ダンパー変位</div><div class="v" id="newD">—</div></div>
-<div class="box"><div class="k">ダンパー変化量</div><div class="v" id="dDelta">—</div></div>
-<div class="box"><div class="k">1Gホイール沈み込み変化</div><div class="v" id="sagDelta">—</div></div>
+<div class="box"><div class="k">現在 ダンパー移動量</div><div class="v" id="oldD">—</div></div>
+<div class="box"><div class="k">変更後 ダンパー移動量</div><div class="v" id="newD">—</div></div>
+<div class="box"><div class="k">ダンパー移動量の変化</div><div class="v" id="dDelta">—</div></div>
+<div class="box"><div class="k">ホイール移動量の変化</div><div class="v" id="sagDelta">—</div></div>
 <div class="box big"><div class="k">車高変化量</div><div class="v" id="rideDelta">—</div></div>
 <div class="box big"><div class="k">変更後車高</div><div class="v" id="newRide">—</div></div>
 </div>
-<div class="note">車高変化は「1Gホイール沈み込み量の減少分＋プリロード増加分」で算出。レート変更とプリロード変更の影響を同じ車高基準で合算します。</div>
+<div class="note">各仕様の移動量を「基準レート・0T」からの変化として算出し、変更後移動量 − 変更前移動量で車高変化を求めます。</div>
 </div>
 
 <div class="card"><h2>計算式</h2><div class="formula">
-スプリングレート(N/mm) = lb/in × 0.1751268<br>
-ホイールレート = スプリングレート × MR²<br>
-1Gホイール沈み込み = 輪荷重×9.80665 ÷ ホイールレート<br>
-1Gダンパー変位 = 1Gホイール沈み込み×MR ＋ プリロード×MR<br>
-車高変化 = (現在1Gホイール沈み込み − 変更後1Gホイール沈み込み) ＋ (変更後プリロード − 現在プリロード)
+基準1Gホイール沈み込み = 輪荷重×9.80665 ÷ 基準ホイールレート<br>
+各仕様1Gホイール沈み込み = 輪荷重×9.80665 ÷ 各仕様ホイールレート<br>
+ホイール移動量 = 基準1G沈み込み − 各仕様1G沈み込み ＋ プリロード<br>
+ダンパー移動量 = ホイール移動量 × MR<br>
+車高変化 = 変更後ホイール移動量 − 変更前ホイール移動量
 </div></div>
 </div>
 
@@ -95,26 +101,26 @@ function rateNmm(v,u){return u==="lb"?v*0.1751268:v*9.80665;}
 function preloadMm(side){return q(side+"PreMode").value==="turn"?+q(side+"Pre").value*+q("pitch").value:+q(side+"Pre").value;}
 function calc(){
  const load=+q("load").value,mr=+q("mr").value,u=q("unit").value;
- const oldRate=+q("oldRate").value,newRate=+q("newRate").value;
- if(!(load>0&&mr>0&&oldRate>0&&newRate>0))return;
+ const refRate=+q("refRate").value,oldRate=+q("oldRate").value,newRate=+q("newRate").value;
+ if(!(load>0&&mr>0&&refRate>0&&oldRate>0&&newRate>0))return;
  const oldPre=preloadMm("old"),newPre=preloadMm("new");
- function values(rate,pre){
+ function sag(rate){
   const spring=rateNmm(rate,u),wheelRate=spring*mr*mr;
-  const sag=(load*9.80665)/wheelRate;
-  const damper=sag*mr+pre*mr;
-  return {sag,damper};
+  return (load*9.80665)/wheelRate;
  }
- const o=values(oldRate,oldPre),n=values(newRate,newPre);
- const damperDelta=n.damper-o.damper;
- const sagDelta=n.sag-o.sag;
- const rideDelta=(o.sag-n.sag)+(newPre-oldPre);
+ const refSag=sag(refRate), oldSag=sag(oldRate), newSag=sag(newRate);
+ const oldMove=refSag-oldSag+oldPre;
+ const newMove=refSag-newSag+newPre;
+ const oldDamper=oldMove*mr, newDamper=newMove*mr;
+ const wheelDelta=newMove-oldMove;
+ const damperDelta=newDamper-oldDamper;
  const ride=q("ride").value===""?null:+q("ride").value;
- q("oldD").textContent=o.damper.toFixed(2)+" mm";
- q("newD").textContent=n.damper.toFixed(2)+" mm";
+ q("oldD").textContent=(oldDamper>=0?"+":"")+oldDamper.toFixed(2)+" mm";
+ q("newD").textContent=(newDamper>=0?"+":"")+newDamper.toFixed(2)+" mm";
  q("dDelta").textContent=(damperDelta>=0?"+":"")+damperDelta.toFixed(2)+" mm";
- q("sagDelta").textContent=(sagDelta>=0?"+":"")+sagDelta.toFixed(2)+" mm";
- q("rideDelta").textContent=(rideDelta>=0?"+":"")+rideDelta.toFixed(2)+" mm";
- q("newRide").textContent=ride===null?"—":ride.toFixed(1)+" → "+(ride+rideDelta).toFixed(1)+" mm";
+ q("sagDelta").textContent=(wheelDelta>=0?"+":"")+wheelDelta.toFixed(2)+" mm";
+ q("rideDelta").textContent=(wheelDelta>=0?"+":"")+wheelDelta.toFixed(2)+" mm";
+ q("newRide").textContent=ride===null?"—":ride.toFixed(1)+" → "+(ride+wheelDelta).toFixed(1)+" mm";
 }
 syncRateUnits();togglePre("old");togglePre("new");calc();
 </script>
