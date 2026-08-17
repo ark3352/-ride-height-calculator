@@ -6,13 +6,13 @@
 <meta name="theme-color" content="#111">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon.svg">
-<title>車高変化計算 Ver.2</title>
+<title>車高変化計算</title>
 <style>
-*{box-sizing:border-box} body{margin:0;background:#f4f4f5;color:#111;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans JP",sans-serif}
-.wrap{max-width:640px;margin:auto;padding:18px 14px 40px} h1{font-size:24px;margin:4px 0}.sub{font-size:13px;color:#666;margin-bottom:16px}
-.card{background:#fff;border-radius:16px;padding:16px;margin:12px 0;box-shadow:0 2px 10px #0000000d} h2{font-size:16px;margin:0 0 13px}
+*{box-sizing:border-box}body{margin:0;background:#f4f4f5;color:#111;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans JP",sans-serif}
+.wrap{max-width:640px;margin:auto;padding:18px 14px 40px}h1{font-size:24px;margin:4px 0}.sub{font-size:13px;color:#666;margin-bottom:16px}
+.card{background:#fff;border-radius:16px;padding:16px;margin:12px 0;box-shadow:0 2px 10px #0000000d}h2{font-size:16px;margin:0 0 13px}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.full{grid-column:1/-1}
-label{display:block;font-size:12px;color:#555;margin:0 0 5px} select,input{width:100%;padding:11px 10px;border:1px solid #d4d4d8;border-radius:10px;background:#fff;font-size:16px}
+label{display:block;font-size:12px;color:#555;margin:0 0 5px}select,input{width:100%;padding:11px 10px;border:1px solid #d4d4d8;border-radius:10px;background:#fff;font-size:16px}
 .row{display:grid;grid-template-columns:1fr 1fr;gap:8px}.muted{font-size:11px;color:#777;margin-top:5px}
 button{width:100%;border:0;border-radius:12px;padding:14px;font-size:17px;font-weight:700;background:#111;color:#fff}
 .result{display:grid;grid-template-columns:1fr 1fr;gap:10px}.box{background:#f5f5f6;border-radius:12px;padding:12px}.k{font-size:12px;color:#666}.v{font-size:23px;font-weight:750;margin-top:4px}.big{grid-column:1/-1;background:#111;color:#fff}.big .k{color:#bbb}.big .v{font-size:30px}
@@ -22,79 +22,55 @@ button{width:100%;border:0;border-radius:12px;padding:14px;font-size:17px;font-w
 </head>
 <body>
 <div class="wrap">
-<h1>車高変化計算 Ver.2</h1>
+<h1>車高変化計算</h1>
 <div class="sub">レート・プリロード変更による1Gダンパー変位と車高変化</div>
 
-<div class="card">
-<h2>車両条件</h2>
-<div class="grid">
+<div class="card"><h2>車両条件</h2><div class="grid">
 <div><label>輪荷重 [kg]</label><input id="load" type="number" step="0.1" value="375"></div>
 <div><label>モーションレシオ（ダンパー/ホイール）</label><input id="mr" type="number" step="0.001" value="0.785"></div>
-<div><div><label>レート単位</label><select id="unit" onchange="syncRateUnits()"><option value="lb">lb/in</option><option value="kg">kgf/mm</option></select></div></div>
-<div><label>現在車高 [mm]（任意）</label><input id="ride" type="number" step="0.1" value="100"></div>
-</div>
-</div>
+<div><label>レート単位</label><select id="unit" onchange="syncRateUnits()"><option value="lb">lb/in</option><option value="kg">kgf/mm</option></select></div>
+<div><label>現在車高 [mm]（任意）</label><input id="ride" type="number" step="0.1" value="124"></div>
+</div></div>
 
-<div class="card">
-<h2>現在の仕様</h2>
-<div class="grid">
-<div>
-<label>スプリングレート（プルダウン / 手入力）</label>
-<div class="row"><select id="oldRatePreset" onchange="setFromPreset('oldRate',this)"></select><input id="oldRate" type="number" step="0.1" value="1300"></div>
-</div>
-<div>
-<label>プリロード方式</label>
-<select id="oldPreMode" onchange="togglePre('old')"><option value="mm">mm</option><option value="turn">ターン</option></select>
-</div>
-<div class="full">
-<label id="oldPreLabel">プリロード [mm]</label>
-<div class="row"><select id="oldPrePreset" onchange="setFromPreset('oldPre',this)"></select><input id="oldPre" type="number" step="0.1" value="2"></div>
-<div class="muted">プルダウンから選択することも、右側へ直接入力することもできます。</div>
-</div>
-</div>
-</div>
+<div class="card"><h2>現在の仕様</h2><div class="grid">
+<div><label>スプリングレート（プルダウン / 手入力）</label><div class="row"><select id="oldRatePreset" onchange="setFromPreset('oldRate',this)"></select><input id="oldRate" type="number" step="0.1" value="1200"></div></div>
+<div><label>プリロード方式</label><select id="oldPreMode" onchange="togglePre('old')"><option value="mm">mm</option><option value="turn">ターン</option></select></div>
+<div class="full"><label id="oldPreLabel">プリロード [mm]</label><div class="row"><select id="oldPrePreset" onchange="setFromPreset('oldPre',this)"></select><input id="oldPre" type="number" step="0.1" value="0"></div><div class="muted">プルダウン選択と数値直接入力の両方に対応。</div></div>
+</div></div>
 
-<div class="card">
-<h2>変更後の仕様</h2>
-<div class="grid">
-<div>
-<label>スプリングレート（プルダウン / 手入力）</label>
-<div class="row"><select id="newRatePreset" onchange="setFromPreset('newRate',this)"></select><input id="newRate" type="number" step="0.1" value="1500"></div>
-</div>
+<div class="card"><h2>変更後の仕様</h2><div class="grid">
+<div><label>スプリングレート（プルダウン / 手入力）</label><div class="row"><select id="newRatePreset" onchange="setFromPreset('newRate',this)"></select><input id="newRate" type="number" step="0.1" value="1500"></div></div>
 <div><label>プリロード方式</label><select id="newPreMode" onchange="togglePre('new')"><option value="mm">mm</option><option value="turn">ターン</option></select></div>
-<div class="full">
-<label id="newPreLabel">プリロード [mm]</label>
-<div class="row"><select id="newPrePreset" onchange="setFromPreset('newPre',this)"></select><input id="newPre" type="number" step="0.1" value="5"></div>
-<div class="muted">プルダウンから選択することも、右側へ直接入力することもできます。</div>
-</div>
-</div>
-</div>
+<div class="full"><label id="newPreLabel">プリロード [mm]</label><div class="row"><select id="newPrePreset" onchange="setFromPreset('newPre',this)"></select><input id="newPre" type="number" step="0.1" value="1.5"></div><div class="muted">ターン選択は1/6ターン刻み。直接入力も可能。</div></div>
+</div></div>
 
-<div class="card">
-<h2>プリロードのターン換算</h2>
-<div class="grid">
-<div><label>1ターンあたり [mm]</label><input id="pitch" type="number" step="0.01" value="2.00"></div>
-<div><label>入力例</label><input value="5ターン → 10.00 mm" disabled></div>
+<div class="card"><h2>プリロードのターン換算</h2><div class="grid">
+<div><label>1ターンあたり [mm]</label><input id="pitch" type="number" step="0.01" value="1.50"></div>
+<div><label>入力例</label><input value="1.5ターン → 2.25 mm" disabled></div>
 </div>
-<div class="note">実際のアジャスターねじピッチに合わせて変更してください。左右でピッチが違う場合は車輪ごとに分けて管理する設計へ拡張できます。</div>
+<div class="note">スプリングシート1ターン＝1.5mmを初期値に設定。必要に応じて変更できます。</div>
 </div>
 
 <div class="card"><button onclick="calc()">計算する</button></div>
 
-<div class="card">
-<h2>計算結果</h2>
-<div class="result">
+<div class="card"><h2>計算結果</h2><div class="result">
 <div class="box"><div class="k">現在 1G ダンパー変位</div><div class="v" id="oldD">—</div></div>
 <div class="box"><div class="k">変更後 1G ダンパー変位</div><div class="v" id="newD">—</div></div>
 <div class="box"><div class="k">ダンパー変化量</div><div class="v" id="dDelta">—</div></div>
-<div class="box"><div class="k">ホイール側変化量</div><div class="v" id="wDelta">—</div></div>
+<div class="box"><div class="k">1Gホイール沈み込み変化</div><div class="v" id="sagDelta">—</div></div>
 <div class="box big"><div class="k">車高変化量</div><div class="v" id="rideDelta">—</div></div>
 <div class="box big"><div class="k">変更後車高</div><div class="v" id="newRide">—</div></div>
 </div>
-<div class="note">＋はダンパー圧縮／車高ダウン方向、−はダンパー伸び／車高アップ方向として表示。</div>
+<div class="note">車高変化は「1Gホイール沈み込み量の減少分＋プリロード増加分」で算出。レート変更とプリロード変更の影響を同じ車高基準で合算します。</div>
 </div>
 
-<div class="card"><h2>計算式</h2><div class="formula">1 lb/in = 0.1751268 N/mm<br>ホイールレート = スプリングレート × MR²<br>1Gホイール変位 = 輪荷重×9.80665 ÷ ホイールレート<br>1Gダンパー変位 = ホイール変位×MR + プリロード×MR<br>車高変化 = −ダンパー変化量 ÷ MR</div></div>
+<div class="card"><h2>計算式</h2><div class="formula">
+スプリングレート(N/mm) = lb/in × 0.1751268<br>
+ホイールレート = スプリングレート × MR²<br>
+1Gホイール沈み込み = 輪荷重×9.80665 ÷ ホイールレート<br>
+1Gダンパー変位 = 1Gホイール沈み込み×MR ＋ プリロード×MR<br>
+車高変化 = (現在1Gホイール沈み込み − 変更後1Gホイール沈み込み) ＋ (変更後プリロード − 現在プリロード)
+</div></div>
 </div>
 
 <script>
@@ -102,47 +78,47 @@ const q=id=>document.getElementById(id);
 const presetsLb=[500,600,700,800,900,1000,1100,1200,1300,1400,1500,1600,1800,2000];
 const presetsKg=[8,10,12,14,16,18,20,22,24,26,28,30,32,35];
 const presetsMm=[0,1,2,3,4,5,6,7,8,10,12,15,20,25];
-const presetsTurn=[0,0.5,1,1.5,2,2.5,3,4,5,6,8,10];
-
-function fill(id,arr){
- const s=q(id); s.innerHTML='<option value="">選択</option>'+arr.map(v=>`<option value="${v}">${v}</option>`).join('');
+const presetsTurn=[0,1/6,2/6,3/6,4/6,5/6,1,7/6,8/6,9/6,10/6,11/6,12/6,13/6,14/6,15/6,16/6,17/6,18/6,20/6,24/6,30/6,36/6];
+function fmtTurn(v){return Number.isInteger(v)?String(v):v.toFixed(3).replace(/0+$/,'').replace(/\.$/,'');}
+function fill(id,arr,formatter=x=>x){
+ const s=q(id); s.innerHTML='<option value="">選択</option>'+arr.map(v=>`<option value="${v}">${formatter(v)}</option>`).join('');
 }
-function setFromPreset(target,sel){if(sel.value!=="") q(target).value=sel.value;}
-function syncRateUnits(){
- const unit=q("unit").value;
- const arr=unit==="lb"?presetsLb:presetsKg;
- fill("oldRatePreset",arr); fill("newRatePreset",arr);
-}
+function setFromPreset(target,sel){if(sel.value!=="")q(target).value=sel.value;}
+function syncRateUnits(){const u=q("unit").value,a=u==="lb"?presetsLb:presetsKg;fill("oldRatePreset",a);fill("newRatePreset",a);}
 function togglePre(side){
- const mode=q(side+"PreMode").value;
- const isTurn=mode==="turn";
- q(side+"PreLabel").textContent=isTurn?"プリロード [turn]":"プリロード [mm]";
- fill(side+"PrePreset",isTurn?presetsTurn:presetsMm);
- q(side+"Pre").step=isTurn?"0.1":"0.1";
+ const turn=q(side+"PreMode").value==="turn";
+ q(side+"PreLabel").textContent=turn?"プリロード [turn]":"プリロード [mm]";
+ fill(side+"PrePreset",turn?presetsTurn:presetsMm,turn?fmtTurn:x=>x);
+ q(side+"Pre").step=turn?"0.1666667":"0.1";
 }
-function rateNmm(v,unit){return unit==="lb"?v*0.1751268:v*9.80665;}
-function preloadMm(side){
- const mode=q(side+"PreMode").value, v=+q(side+"Pre").value, pitch=+q("pitch").value;
- return mode==="turn"?v*pitch:v;
-}
+function rateNmm(v,u){return u==="lb"?v*0.1751268:v*9.80665;}
+function preloadMm(side){return q(side+"PreMode").value==="turn"?+q(side+"Pre").value*+q("pitch").value:+q(side+"Pre").value;}
 function calc(){
- const load=+q("load").value,mr=+q("mr").value,unit=q("unit").value;
+ const load=+q("load").value,mr=+q("mr").value,u=q("unit").value;
  const oldRate=+q("oldRate").value,newRate=+q("newRate").value;
- if(!(load>0&&mr>0&&oldRate>0&&newRate>0)) return;
+ if(!(load>0&&mr>0&&oldRate>0&&newRate>0))return;
  const oldPre=preloadMm("old"),newPre=preloadMm("new");
- function damper(rate,pre){const spring=rateNmm(rate,unit),wheel=spring*mr*mr,wd=(load*9.80665)/wheel;return wd*mr+pre*mr;}
- const od=damper(oldRate,oldPre),nd=damper(newRate,newPre),dd=nd-od,wd=dd/mr,rd=-wd;
+ function values(rate,pre){
+  const spring=rateNmm(rate,u),wheelRate=spring*mr*mr;
+  const sag=(load*9.80665)/wheelRate;
+  const damper=sag*mr+pre*mr;
+  return {sag,damper};
+ }
+ const o=values(oldRate,oldPre),n=values(newRate,newPre);
+ const damperDelta=n.damper-o.damper;
+ const sagDelta=n.sag-o.sag;
+ const rideDelta=(o.sag-n.sag)+(newPre-oldPre);
  const ride=q("ride").value===""?null:+q("ride").value;
- q("oldD").textContent=od.toFixed(2)+" mm";q("newD").textContent=nd.toFixed(2)+" mm";
- q("dDelta").textContent=(dd>=0?"+":"")+dd.toFixed(2)+" mm";q("wDelta").textContent=(wd>=0?"+":"")+wd.toFixed(2)+" mm";
- q("rideDelta").textContent=(rd>=0?"+":"")+rd.toFixed(2)+" mm";
- q("newRide").textContent=ride===null?"—":ride.toFixed(1)+" → "+(ride+rd).toFixed(1)+" mm";
+ q("oldD").textContent=o.damper.toFixed(2)+" mm";
+ q("newD").textContent=n.damper.toFixed(2)+" mm";
+ q("dDelta").textContent=(damperDelta>=0?"+":"")+damperDelta.toFixed(2)+" mm";
+ q("sagDelta").textContent=(sagDelta>=0?"+":"")+sagDelta.toFixed(2)+" mm";
+ q("rideDelta").textContent=(rideDelta>=0?"+":"")+rideDelta.toFixed(2)+" mm";
+ q("newRide").textContent=ride===null?"—":ride.toFixed(1)+" → "+(ride+rideDelta).toFixed(1)+" mm";
 }
 syncRateUnits();togglePre("old");togglePre("new");calc();
 </script>
 <script>
-if ("serviceWorker" in navigator) {
-  window.addEventListener("load", () => navigator.serviceWorker.register("sw.js"));
-}
+if("serviceWorker"in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js"));
 </script>
 </body></html>
